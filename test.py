@@ -3,99 +3,8 @@ from contextlib import asynccontextmanager
 from playwright.async_api import async_playwright
 import uvicorn
 from llmGoogle import llm
+import time
 import uuid
-
-# system_prompt_for_interact = """
-#     **Role**  
-#     Playwright Python command generator for active browser sessions
-
-#     **Input Format**  
-#     Natural language instruction (e.g., "Take screenshot of header after login")
-
-#     **Output Rules**  
-#     1. EXCLUSIVELY output a SINGLE async Playwright Python command using the existing `page` object and the next input command on a new line.
-#     2. "<command> \n <next_input_command>"
-#     3. No explanations, comments, or formatting symbols
-#     4. Always start by navigating to the page that we want.
-#     5. Prioritize these methods:
-#         - role-based locators (get_by_role)
-#         - text-based locators (get_by_text)
-#     6. Include essential waits:
-#         - wait_for_timeout(2000) for fixed delays
-#         - wait_for_load_state("networkidle")
-#         - wait_for_selector() with 10s timeout
-#     7. Chain related actions using:  
-#         .first  
-#         .nth(index)  
-#         .filter() 
-#     8. Check if the element exists before clicking or filling using:
-#         - if locator.count() > 0:  
-#         - if locator.is_visible():
-#         - if locator.is_hidden():
-#         - if locator.is_enabled():               
-#     9. Replace <variable_value> with the actual value in the command.
-#     10. If an input is involved, check if the input field is properly filled before submitting.
-    
-    
-#     **Examples**
-#     1. 
-#     Input: "log in into https://practicetestautomation.com/practice-test-login/ with username student and password Password123"
-#     Output: "await page.goto("https://practicetestautomation.com/practice-test-login/") \n Fill out the username field with 'student'."
-    
-#     Input: "Fill out the username field with 'student'."
-#     Output: "await page.get_by_role('textbox', name='Username').fill('student') \n Wait for the password field to be visible. If already visible, continue."
-    
-#     Input: "Fill in the password field with Password123."
-#     Output: "await page.get_by_role('textbox', name='Password').fill('Password123') \n Wait for the submit button to be enabled/ If already enabled, click on the submit/log in button."
-    
-#     Input: "Wait for the submit button to be enabled/ If already enabled, click on the submit/log in button."
-#     Output: "await page.get_by_role('button', name='Submit').click() \n print('#completed')"
-    
-#     Input: "Set action_done to True."
-#     Output: "print('#completed') \n Done."
-    
-    
-#     2. 
-#     Input: "log in into reddit.com with username boogiemann and password Aakar@2000"
-#     Output: "await page.goto('https://reddit.com') \n Verify that the Reddit homepage has loaded."
-
-#     Input: "Verify that the Reddit homepage has loaded."
-#     Output: "await page.get_by_role('link', name='Log In').wait_for(timeout=5000) \n Locate the 'Log In' link."
-
-#     Input: "Locate the 'Log In' link."
-#     Output: "await page.get_by_role('link', name='Log In').click() \n Wait for the username field to become visible."
-
-#     Input: "Wait for the username field to become visible."
-#     Output: "await page.get_by_role('textbox', name='Username').wait_for(timeout=5000) \n Fill in the username field with 'boggiemann'."
-
-#     Input: "Fill in the username field with 'boggiemann'."
-#     Output: "await page.get_by_role('textbox', name='Username').fill('boggiemann') \n Wait for the password field to become visible."
-
-#     Input: "Wait for the password field to become visible."
-#     Output: "await page.get_by_role('textbox', name='Password').wait_for(timeout=5000) \n Fill in the password field with 'Aakar@2000'."
-
-#     Input: "Fill in the password field with 'Aakar@2000'."
-#     Output: "await page.get_by_role('textbox', name='Password').fill('Aakar@2000') \n Wait a moment before submitting."
-
-#     Input: "Wait a moment before submitting."
-#     Output: "await page.wait_for_timeout(1000) \n Click the 'Log In' button."
-
-#     Input: "Click the 'Log In' button."
-#     Output: "await page.get_by_role('button', name='Log In').click() \n Wait a moment after submitting."
-
-#     Input: "Wait a moment after submitting."
-#     Output: "await page.wait_for_timeout(1000) \n Navigate to Popular."
-
-#     Input: "Navigate to Popular."
-#     Output: "await page.locator('a:has-text(\"Popular\")').click() \n Wait for the 'Popular' page to load."
-
-#     Input: "Wait for the 'Popular' page to load."
-#     Output: "await page.wait_for_load_state('networkidle') \n Set action_done to True."
-    
-#     Input: "Set action_done to True."
-#     Output: "print('#completed') \n Done."
-# """
-
 
 system_prompt_for_interact = """
     *`*Role**  
@@ -127,6 +36,7 @@ system_prompt_for_interact = """
         - `if locator.is_enabled():`
     10. Replace `<variable_value>` with the actual value in the command.
     11. If an input is involved, confirm that the field is filled before submitting.
+    12. If filling a field, ensure the field is visible before filling it. If a field is not visible, a click action might be needed to make it visible.
 
     **Examples**
 
@@ -186,6 +96,55 @@ system_prompt_for_interact = """
     
     Input: "Set action_done to True."
     Output: "print('#completed') \n Done."
+    
+    3.
+    
+    
+    Input: "log in into twitter.com with username 'aakarmutha' and password 'a 303jan00'. Search for 'crustdata' and click on the first tweet"
+    Output: "await page.goto('https://x.com') \n Locate and click the sign-in button"
+
+    Input: "Locate and click the sign-in button"
+    Output: "await page.get_by_role('link', name='Sign in').click() \n Wait for login form to load"
+
+    Input: "Wait for login form to load"
+    Output: "await page.get_by_label('Phone, email, or username').wait_for(timeout=10000) \n Fill username field with 'aakarmutha'"
+
+    Input: "Fill username field with 'aakarmutha'"
+    Output: "await page.get_by_label('Phone, email, or username').fill('aakarmutha') \n Click next button after username entry"
+
+    Input: "Click next button after username entry"
+    Output: "await page.get_by_role('button', name='Next').click() \n Wait for password field visibility"
+
+    Input: "Wait for password field visibility"
+    Output: "await page.locator('input[name=\"password\"]').wait_for(timeout=5000) \n Fill password field with 'a 303jan00'"
+
+    Input: "Fill password field with 'a 303jan00'"
+    Output: "await page.locator('input[name=\"password\"]').fill('a 303jan00') \n Click final login button"
+
+    Input: "Click final login button"
+    Output: "await page.get_by_role('button', name='Log in').click() \n Wait for home feed to load"
+
+    Input: "Wait for home feed to load"
+    Output: "await page.wait_for_load_state('networkidle') \n Focus search input field"
+
+    Input: "Focus search input field"
+    Output: "await page.locator('input[placeholder=\"Search\"]').click() \n Search for 'crustdata'"
+
+    Input: "Search for 'crustdata'"
+    Output: "await page.locator('input[placeholder=\"Search\"]').fill('crustdata') \n Submit search query"
+
+    Input: "Submit search query"
+    Output: "await page.keyboard.press('Enter') \n Wait for search results"
+
+    Input: "Wait for search results"
+    Output: "await page.wait_for_selector('[role=\"article\"]') \n Open first search result"
+
+    Input: "Open first search result"
+    Output: "await page.get_by_role('article').first.click() \n Verify content loaded"
+
+    Input: "Verify content loaded"
+    Output: "await page.wait_for_selector('[role=\"main\"]') \n print('#completed')"
+
     """
 MAX_RETRIES = 5
 
@@ -257,7 +216,6 @@ async def interact_command(session_id: str, command: dict):
         try:
             response = session["llm"].generate_response(user_message)
             print(response)
-            # Pick only the first non-empty command
             command_line, next_command  = [line.strip() for line in response.split("\n") if line.strip()]
             if "await" in command_line:
                 command_line = command_line.replace("await", "").strip()
@@ -270,11 +228,6 @@ async def interact_command(session_id: str, command: dict):
             session["last_command"] = command_line
             
             await eval(command_line)
-            # await page.wait_for_timeout(5000)
-            # if "click" in command_line:
-                # await page.wait_for_load_state("networkidle")
-                # await page.wait_for_timeout(3000)
-            # await page.wait_for_timeout(500)
             session['commands_executed'].append(command_line)
             page_content = await page.evaluate("document.body.innerHTML")
             page_content = page_content.replace("\n", " ").replace("\r", " ").replace("\t", " ").replace("  ", " ")
@@ -291,10 +244,6 @@ async def interact_command(session_id: str, command: dict):
             
             if session['retry_count'] >= MAX_RETRIES:
                 return {"status": "failure", "error": f"{e}", "commands_executed": session['commands_executed']}
-            # print(f"Error: {e}")
-            # user_message = f"\n\n**Error**\n The type of element might not be found. Following is the error\n{e}. Use a different attribute or locator to find the element."
-            # user_message += f"\n\n**Current Page Content**\n{session['page_content']}"
-            # user_message += f"\n\n**Last Executed Command**\n{session["last_command"]}"
             
             user_message = f"The command '{session.get('last_command', '')}' failed with error: {e}. Please try a different approach."
             user_message += f"\n\n**Current Page Content**\n{session['page_content']}"
@@ -307,6 +256,8 @@ async def interact_command(session_id: str, command: dict):
 
         if session['action_done']:
             break
+        
+        time.sleep(4.2)
         
     return {"status": "success", "commands_executed": session['commands_executed'], "code": 200}
 
