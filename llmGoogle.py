@@ -2,7 +2,6 @@ import os
 from google import genai
 from dotenv import load_dotenv
 from pprint import pprint
-from google.genai.types import GenerateContentConfigOrDict 
 load_dotenv()
 
 
