@@ -5,8 +5,60 @@ import uvicorn
 from llmGoogle import llm
 import time
 import uuid
+import json
 
-system_prompt_for_interact = """
+# """
+
+    
+    # 2.    
+    # Input: "log in into twitter.com with username 'aakarmutha' and password 'a 303jan00'. Search for 'crustdata' and click on the first tweet"
+    # Output: "await page.goto('https://x.com') \n Locate and click the sign-in button"
+
+    # Input: "Locate and click the sign-in button"
+    # Output: "await page.get_by_role('link', name='Sign in').click() \n Wait for login form to load"
+
+    # Input: "Wait for login form to load"
+    # Output: "await page.get_by_label('Phone, email, or username').wait_for(timeout=10000) \n Fill username field with 'aakarmutha'"
+
+    # Input: "Fill username field with 'aakarmutha'"
+    # Output: "await page.get_by_label('Phone, email, or username').fill('aakarmutha') \n Click next button after username entry"
+
+    # Input: "Click next button after username entry"
+    # Output: "await page.get_by_role('button', name='Next').click() \n Wait for password field visibility"
+
+    # Input: "Wait for password field visibility"
+    # Output: "await page.locator('input[name=\"password\"]').wait_for(timeout=5000) \n Fill password field with 'a 303jan00'"
+
+    # Input: "Fill password field with 'a 303jan00'"
+    # Output: "await page.locator('input[name=\"password\"]').fill('a 303jan00') \n Click final login button"
+
+    # Input: "Click final login button"
+    # Output: "await page.get_by_role('button', name='Log in').click() \n Wait for home feed to load"
+
+    # Input: "Wait for home feed to load"
+    # Output: "await page.wait_for_load_state('networkidle') \n Focus search input field"
+
+    # Input: "Focus search input field"
+    # Output: "await page.locator('input[placeholder=\"Search\"]').click() \n Search for 'crustdata'"
+
+    # Input: "Search for 'crustdata'"
+    # Output: "await page.locator('input[placeholder=\"Search\"]').fill('crustdata') \n Submit search query"
+
+    # Input: "Submit search query"
+    # Output: "await page.keyboard.press('Enter') \n Wait for search results"
+
+    # Input: "Wait for search results"
+    # Output: "await page.wait_for_selector('[role=\"article\"]') \n Open first search result"
+
+    # Input: "Open first search result"
+    # Output: "await page.get_by_role('article').first.click() \n Verify content loaded"
+
+    # Input: "Verify content loaded"
+    # Output: "await page.wait_for_selector('[role=\"main\"]') \n print('#completed')"
+# """
+MAX_RETRIES = 5
+
+INTERACT_SYSTEM_PROMPT = """
     *`*Role**  
     You are an expert UI tester working in Playwright Python. Your task is to generate commands for the active browser tab.
 
@@ -55,10 +107,9 @@ system_prompt_for_interact = """
     
     Input: "Set action_done to True."
     Output: "print('#completed') \n Done."
-
-
+   
     2.  
-    Input: "log in into reddit.com with username boogiemann and password Aakar@2000 and navigate to popular"
+    Input: "log in into reddit.com with username boogieman and password abcd1234 and navigate to popular"
     Output: "await page.goto('https://reddit.com') \n Verify that the Reddit homepage has loaded."
 
     Input: "Verify that the Reddit homepage has loaded."
@@ -74,10 +125,10 @@ system_prompt_for_interact = """
     Output: "await page.get_by_role('textbox', name='Username').fill('boggiemann') \n Wait for the password field to become visible."
 
     Input: "Wait for the password field to become visible."
-    Output: "await page.get_by_role('textbox', name='Password').wait_for(timeout=5000) \n Fill in the password field with 'Aakar@2000'."
+    Output: "await page.get_by_role('textbox', name='Password').wait_for(timeout=5000) \n Fill in the password field with 'abcd1234'."
 
-    Input: "Fill in the password field with 'Aakar@2000'."
-    Output: "await page.get_by_role('textbox', name='Password').fill('Aakar@2000') \n Wait a moment before submitting."
+    Input: "Fill in the password field with 'abcd1234'."
+    Output: "await page.get_by_role('textbox', name='Password').fill('abcd1234') \n Wait a moment before submitting."
 
     Input: "Wait a moment before submitting."
     Output: "await page.wait_for_timeout(1000) \n Click the 'Log In' button."
@@ -96,57 +147,9 @@ system_prompt_for_interact = """
     
     Input: "Set action_done to True."
     Output: "print('#completed') \n Done."
-    
-    3.
-    
-    
-    Input: "log in into twitter.com with username 'aakarmutha' and password 'a 303jan00'. Search for 'crustdata' and click on the first tweet"
-    Output: "await page.goto('https://x.com') \n Locate and click the sign-in button"
-
-    Input: "Locate and click the sign-in button"
-    Output: "await page.get_by_role('link', name='Sign in').click() \n Wait for login form to load"
-
-    Input: "Wait for login form to load"
-    Output: "await page.get_by_label('Phone, email, or username').wait_for(timeout=10000) \n Fill username field with 'aakarmutha'"
-
-    Input: "Fill username field with 'aakarmutha'"
-    Output: "await page.get_by_label('Phone, email, or username').fill('aakarmutha') \n Click next button after username entry"
-
-    Input: "Click next button after username entry"
-    Output: "await page.get_by_role('button', name='Next').click() \n Wait for password field visibility"
-
-    Input: "Wait for password field visibility"
-    Output: "await page.locator('input[name=\"password\"]').wait_for(timeout=5000) \n Fill password field with 'a 303jan00'"
-
-    Input: "Fill password field with 'a 303jan00'"
-    Output: "await page.locator('input[name=\"password\"]').fill('a 303jan00') \n Click final login button"
-
-    Input: "Click final login button"
-    Output: "await page.get_by_role('button', name='Log in').click() \n Wait for home feed to load"
-
-    Input: "Wait for home feed to load"
-    Output: "await page.wait_for_load_state('networkidle') \n Focus search input field"
-
-    Input: "Focus search input field"
-    Output: "await page.locator('input[placeholder=\"Search\"]').click() \n Search for 'crustdata'"
-
-    Input: "Search for 'crustdata'"
-    Output: "await page.locator('input[placeholder=\"Search\"]').fill('crustdata') \n Submit search query"
-
-    Input: "Submit search query"
-    Output: "await page.keyboard.press('Enter') \n Wait for search results"
-
-    Input: "Wait for search results"
-    Output: "await page.wait_for_selector('[role=\"article\"]') \n Open first search result"
-
-    Input: "Open first search result"
-    Output: "await page.get_by_role('article').first.click() \n Verify content loaded"
-
-    Input: "Verify content loaded"
-    Output: "await page.wait_for_selector('[role=\"main\"]') \n print('#completed')"
-
     """
-MAX_RETRIES = 5
+    
+
 
 class SessionManager:
     """Manages browser sessions."""
@@ -158,7 +161,7 @@ class SessionManager:
         self.sessions[session_id] = {
             "page": None,
             "commands_executed": [],
-            "page_content": "",
+            "page_snapshot": "",
             "retry_count": 0,
             "action_done": False,
             "llm": None,
@@ -179,7 +182,7 @@ async def lifespan(app: FastAPI):
     """Startup and shutdown events for the FastAPI app."""
     global _browser, _llm
     async with async_playwright() as playwright:
-        _browser = await playwright.chromium.launch(headless=False)
+        _browser = await playwright.chromium.launch(headless=False, timeout=15000)
         yield
         await _browser.close()
     
@@ -187,16 +190,36 @@ app = FastAPI(lifespan=lifespan)
 
 _browser, _llm = None, None
 
+
+
 @app.post("/start_session")
 async def start_session(mode:str = "interact"):
-    """Creates a new browser session."""
+    """
+    Creates a new browser session.
+    
+    curl --request POST \
+    --url http://localhost:8000/start_session \
+    --header 'content-type: application/json' \
+    --data '{
+    "mode":"interact"
+}'
+    """
     session_id = session_manager.create_session()
     if mode.strip().lower() == "interact":
-        session_manager.sessions[session_id]["llm"] = llm(system_prompt_for_interact)
+        session_manager.sessions[session_id]["llm"] = llm(INTERACT_SYSTEM_PROMPT)
     return {"session_id": session_id}
 
 @app.post("/interact/{session_id}")
 async def interact_command(session_id: str, command: dict):
+    """
+    Interacts with the browser session using the provided command. Get session ID from /start_session endpoint.
+    curl --request POST \
+    --url http://localhost:8000/interact/371a5f22-63de-4df1-8754-b1e11f43141e \
+    --header 'content-type: application/json' \
+    --data '{
+    "message":"log in into twitter.com with username '\''<username>'\'' and password '\''<password>'\''. Search for '\''crustdata'\'' and open the first post"
+    }'
+    """
     
     session = session_manager.get_session(session_id)
     if not session:
@@ -224,16 +247,13 @@ async def interact_command(session_id: str, command: dict):
                 session['action_done'] = True
                 break   
             
-            # print(command_line)
             session["last_command"] = command_line
-            
             await eval(command_line)
             session['commands_executed'].append(command_line)
-            page_content = await page.evaluate("document.body.innerHTML")
-            page_content = page_content.replace("\n", " ").replace("\r", " ").replace("\t", " ").replace("  ", " ")
-            session['page_content'] = page_content
+            page_snapshot = await page.accessibility.snapshot()
+            session['page_snapshot'] = json.dumps(page_snapshot)
             user_message = "**Final Goal**\n" + goal
-            user_message += f"\n\n**Current Page Content**\n{page_content[:2000]}"
+            user_message += f"\n\n**Current Page Snapshot**\n{page_snapshot}"
             user_message += f"\n\n **Next Goal**\n{next_command}"      
             
             user_message += f"\n\n**Commands Executed**\n{"\n".join(session['commands_executed'])}"      
@@ -242,11 +262,11 @@ async def interact_command(session_id: str, command: dict):
         except Exception as e:
             session['retry_count'] += 1
             
+            print(f"Error: {e}")
             if session['retry_count'] >= MAX_RETRIES:
                 return {"status": "failure", "error": f"{e}", "commands_executed": session['commands_executed']}
-            
             user_message = f"The command '{session.get('last_command', '')}' failed with error: {e}. Please try a different approach."
-            user_message += f"\n\n**Current Page Content**\n{session['page_content']}"
+            user_message += f"\n\n**Current Page Snapshot**\n{session['page_snapshot']}"
             user_message += f"\n\n**Commands Executed**\n{"\n".join(session['commands_executed'])}"
             
 
@@ -257,8 +277,7 @@ async def interact_command(session_id: str, command: dict):
         if session['action_done']:
             break
         
-        time.sleep(4.2)
-        
+        await page.wait_for_timeout(4000)
     return {"status": "success", "commands_executed": session['commands_executed'], "code": 200}
 
 if __name__ == "__main__":
