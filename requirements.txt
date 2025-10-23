@@ -1,0 +1,18 @@
+# Core Dependencies
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+playwright>=1.40.0
+pydantic>=2.5.0
+
+# LLM Integration
+google-generativeai>=0.3.0
+
+# Utilities
+python-dotenv>=1.0.0
+
+# Optional: For development
+black>=23.11.0
+flake8>=6.1.0
+pytest>=7.4.3
+mypy>=1.7.0
+
